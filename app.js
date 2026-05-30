@@ -75,25 +75,44 @@ function speakViaIframe(url) {
     }, 2000);
 }
 
-function speakDutch(text) {
-    if (!navigator.onLine) {
-        showToast("Could not play audio — check your internet connection.");
-        return;
+const synth = window.speechSynthesis;
+const voices = synth.getVoices();
+let dutchVoices = [];
+for (const voice of voices) {
+    if (voice.lang == 'nl-NL') {
+        dutchVoices.push(voice)
     }
+}
 
-    const url = getTtsUrl(text);
-    ttsBtn.classList.add("speaking");
+function speakDutch(text) {
+    // Start by trying to use a local Voice for Speech Synthesis
+    if (dutchVoices.length > 0) {
+        // Will only pronounce at all correctly if the user has a dutch voice installed.
+        let rand = Math.random(0, dutchVoices.length);
+        let my_voice = dutchVoices[rand];
+        const utterThis = new SpeechSynthesisUtterance(text);
+        utterThis.voice = my_voice;
+        synth.speak(utterThis);
+    } else {
+        if (!navigator.onLine) {
+            showToast("Could not play audio — check your internet connection.");
+            return;
+        }
 
-    // Try direct Audio first (works locally and some browsers)
-    ttsAudio.src = url;
-    ttsAudio.play()
-        .then(() => {
-            // Audio is playing — great, nothing else needed
-        })
-        .catch(() => {
-            // Audio blocked (CORS on HTTPS) — fall back to iframe
-            speakViaIframe(url);
-        });
+        const url = getTtsUrl(text);
+        ttsBtn.classList.add("speaking");
+
+        // Try direct Audio first (works locally and some browsers)
+        ttsAudio.src = url;
+        ttsAudio.play()
+            .then(() => {
+                // Audio is playing — great, nothing else needed
+            })
+            .catch(() => {
+                // Audio blocked (CORS on HTTPS) — fall back to iframe
+                speakViaIframe(url);
+            });
+    }
 }
 
 ttsAudio.addEventListener("ended", () => ttsBtn.classList.remove("speaking"));
